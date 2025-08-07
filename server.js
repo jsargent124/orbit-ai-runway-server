@@ -1,13 +1,12 @@
-const express = require('express');
-const axios = require('axios');
+import express from 'express';
+import RunwayML, { TaskFailedError } from '@runwayml/sdk';
+import dotenv from 'dotenv';
+
+dotenv.config();
 const app = express();
 app.use(express.json());
 
-const RUNWAY_API_KEY = process.env.RUNWAY_API_KEY;
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+const client = new RunwayML({ apiKey: process.env.RUNWAY_API_KEY });
 
 app.post('/image', async (req, res) => {
   const prompt = req.body.prompt;
@@ -17,38 +16,42 @@ app.post('/image', async (req, res) => {
   }
 
   try {
-    const response = await axios.post(
-      'https://api.dev.runwayml.com/v1/generate/image',
-      {
-        prompt: prompt,
-        size: '1024x1024'
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${RUNWAY_API_KEY}`,
-          'Content-Type': 'application/json',
-          'X-Runway-Version': '2024-05-21'  // ✅ This is the correct version for image gen
-        }
-      }
-    );
+    console.log('📤 Submitting task to Runway...');
+    const task = await client.textToImage
+      .create({
+        model: 'gen4_image',
+        ratio: '1:1',
+        promptText: prompt
+      })
+      .waitForTaskOutput();
 
-    console.log('✅ Runway Response received. Pausing for 2 minutes...');
-    await sleep(2 * 60 * 1000); // ⏱️ 2-minute delay
+    const output = task.output?.[0];
 
-    res.status(200).json(response.data);
+    if (!output) {
+      return res.status(500).json({ error: 'No image output returned.' });
+    }
+
+    console.log('✅ Image generation complete:', output);
+    res.status(200).json({ imageUrl: output });
 
   } catch (error) {
-    const errResponse = error.response?.data || error.message;
-    console.error('❌ Error from Runway API:', errResponse);
-
-    res.status(500).json({
-      error: 'Failed to generate image',
-      details: errResponse
-    });
+    if (error instanceof TaskFailedError) {
+      console.error('❌ Runway task failed:', error.taskDetails);
+      return res.status(500).json({
+        error: 'Image generation failed',
+        details: error.taskDetails
+      });
+    } else {
+      console.error('❌ Unexpected error:', error);
+      return res.status(500).json({
+        error: 'Unexpected server error',
+        details: error.message
+      });
+    }
   }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`🚀 SDK-based Runway server live on port ${PORT}`);
 });
