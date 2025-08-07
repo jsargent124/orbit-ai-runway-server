@@ -5,6 +5,10 @@ app.use(express.json());
 
 const RUNWAY_API_KEY = process.env.RUNWAY_API_KEY;
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 app.post('/image', async (req, res) => {
   const prompt = req.body.prompt;
 
@@ -23,12 +27,14 @@ app.post('/image', async (req, res) => {
         headers: {
           'Authorization': `Bearer ${RUNWAY_API_KEY}`,
           'Content-Type': 'application/json',
-          'X-Runway-Version': '2024-05-17'  // REQUIRED version header
+          'X-Runway-Version': '2024-06-15'
         }
       }
     );
 
-    console.log('✅ Runway Response:', response.data);
+    console.log('✅ Runway Response received. Pausing for 2 minutes...');
+    await sleep(2 * 60 * 1000); // ⏱️ 2-minute delay
+
     res.status(200).json(response.data);
 
   } catch (error) {
