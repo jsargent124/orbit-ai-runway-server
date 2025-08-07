@@ -14,7 +14,7 @@ app.post('/image', async (req, res) => {
 
   try {
     const response = await axios.post(
-      'https://api.runwayml.com/v1/generate/image',  // If this fails, change to latest from docs
+      'https://api.dev.runwayml.com/v1/generate/image',
       {
         prompt: prompt,
         size: '1024x1024'
