@@ -27,7 +27,7 @@ app.post('/image', async (req, res) => {
         headers: {
           'Authorization': `Bearer ${RUNWAY_API_KEY}`,
           'Content-Type': 'application/json',
-          'X-Runway-Version': '2024-06-15'
+          'X-Runway-Version': '2024-05-21'  // ✅ This is the correct version for image gen
         }
       }
     );
