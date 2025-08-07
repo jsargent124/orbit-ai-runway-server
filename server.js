@@ -22,7 +22,8 @@ app.post('/image', async (req, res) => {
       {
         headers: {
           'Authorization': `Bearer ${RUNWAY_API_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Runway-Version': '2024-05-17'  // REQUIRED version header
         }
       }
     );
