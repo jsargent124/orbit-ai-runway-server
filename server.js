@@ -1,14 +1,15 @@
 import express from 'express';
-import RunwayML, { TaskFailedError } from '@runwayml/sdk';
+import axios from 'axios';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
 const app = express();
 app.use(express.json());
 
-const client = new RunwayML({ apiKey: process.env.RUNWAY_API_KEY });
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-app.post('/image', async (req, res) => {
+app.post('/dalle', async (req, res) => {
   const prompt = req.body.prompt;
 
   if (!prompt) {
@@ -16,42 +17,40 @@ app.post('/image', async (req, res) => {
   }
 
   try {
-    console.log('📤 Submitting task to Runway...');
-    const task = await client.textToImage
-      .create({
-        model: 'gen4_image',
-        ratio: '1:1',
-        promptText: prompt
-      })
-      .waitForTaskOutput();
+    const response = await axios.post(
+      'https://api.openai.com/v1/images/generations',
+      {
+        prompt: prompt,
+        n: 1,
+        size: '1024x1024'
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
 
-    const output = task.output?.[0];
-
-    if (!output) {
-      return res.status(500).json({ error: 'No image output returned.' });
+    const imageUrl = response.data.data?.[0]?.url;
+    if (!imageUrl) {
+      return res.status(500).json({ error: 'No image returned by OpenAI' });
     }
 
-    console.log('✅ Image generation complete:', output);
-    res.status(200).json({ imageUrl: output });
+    console.log('🎨 DALL·E Image Generated:', imageUrl);
+    res.status(200).json({ imageUrl });
 
   } catch (error) {
-    if (error instanceof TaskFailedError) {
-      console.error('❌ Runway task failed:', error.taskDetails);
-      return res.status(500).json({
-        error: 'Image generation failed',
-        details: error.taskDetails
-      });
-    } else {
-      console.error('❌ Unexpected error:', error);
-      return res.status(500).json({
-        error: 'Unexpected server error',
-        details: error.message
-      });
-    }
+    const errResponse = error.response?.data || error.message;
+    console.error('❌ Error from OpenAI API:', errResponse);
+    res.status(500).json({
+      error: 'Failed to generate image from OpenAI',
+      details: errResponse
+    });
   }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 SDK-based Runway server live on port ${PORT}`);
+  console.log(`🚀 DALL·E server is live on port ${PORT}`);
 });
