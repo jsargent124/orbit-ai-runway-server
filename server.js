@@ -50,6 +50,11 @@ app.post('/dalle', async (req, res) => {
   }
 });
 
+// 🟢 KEEP-ALIVE ROUTE FOR RENDER
+app.get('/ping', (req, res) => {
+  res.status(200).send('🟢 Orbit AI Server is awake.');
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 DALL·E server is live on port ${PORT}`);
